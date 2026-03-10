@@ -5,7 +5,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 async function callModel(systemPrompt, userMessage) {
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
+    max_tokens: 1000,
     system: systemPrompt,
     tools: [{ type: 'web_search_20260209', name: 'web_search' }],
     messages: [{ role: 'user', content: userMessage }],
@@ -28,7 +28,7 @@ async function callModel(systemPrompt, userMessage) {
 
     const followUp = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      max_tokens: 1000,
       system: systemPrompt,
       tools: [{ type: 'web_search_20260209', name: 'web_search' }],
       messages: [
