@@ -4,7 +4,7 @@ const { callModel: callClaude } = require('../services/anthropic');
 const { callModel: callGPT } = require('../services/openai');
 const { callModel: callGemini } = require('../services/gemini');
 const { callModel: callGrok } = require('../services/grok');
-const { callModel: callMistral } = require('../services/mistral');
+// const { callModel: callMistral } = require('../services/mistral'); // désactivé temporairement
 
 const SYSTEM_PROMPTS = {
   claude:
@@ -15,8 +15,6 @@ const SYSTEM_PROMPTS = {
     "Tu es Gemini par Google — axé sur les données, conscient des tendances macro, quantitatif, références au contexte marché mondial. Réponds en 2-3 paragraphes. Sois direct et précis.",
   grok:
     "Tu es Grok par xAI — contrarian, incisif, attentif au sentiment de marché et aux signaux sociaux en temps réel. Ton direct et percutant. 2-3 paragraphes en français.",
-  mistral:
-    "Tu es Mistral par Mistral AI — perspective européenne, fort sur la réglementation EU/belge, MiFID II, pragmatique et concis. 2-3 paragraphes en français.",
 };
 
 const MODEL_CALLERS = {
@@ -24,12 +22,11 @@ const MODEL_CALLERS = {
   gpt54: callGPT,
   gemini: callGemini,
   grok: callGrok,
-  mistral: callMistral,
 };
 
 router.post('/', async (req, res) => {
   try {
-    const { question, models = ['claude', 'gpt54', 'gemini', 'grok', 'mistral'] } = req.body;
+    const { question, models = ['claude', 'gpt54', 'gemini', 'grok'] } = req.body;
 
     if (!question) {
       return res.status(400).json({ error: 'Le champ "question" est requis.' });

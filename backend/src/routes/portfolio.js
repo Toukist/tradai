@@ -4,7 +4,7 @@ const { callModel: callClaude } = require('../services/anthropic');
 const { callModel: callGPT } = require('../services/openai');
 const { callModel: callGemini } = require('../services/gemini');
 const { callModel: callGrok } = require('../services/grok');
-const { callModel: callMistral } = require('../services/mistral');
+// const { callModel: callMistral } = require('../services/mistral'); // désactivé temporairement
 
 const PORTFOLIO_ADDON =
   "\nPour l'analyse de portefeuille:\n1. Identifie les forces et faiblesses de l'allocation\n2. Détecte les doublons ou surexpositions sectorielles\n3. Évalue la cohérence avec le profil de risque et l'horizon\n4. Suggère des pistes de switch ou rééquilibrage\nTermine TOUJOURS par: ⚠️ Ces pistes de réflexion ne constituent pas un conseil en investissement au sens de MiFID II. Consultez votre conseiller financier agréé avant toute décision.";
@@ -18,8 +18,6 @@ const BASE_PROMPTS = {
     "Tu es Gemini par Google — axé sur les données, conscient des tendances macro, quantitatif, références au contexte marché mondial. Réponds en 2-3 paragraphes. Sois direct et précis.",
   grok:
     "Tu es Grok par xAI — contrarian, incisif, attentif au sentiment de marché et aux signaux sociaux en temps réel. Ton direct et percutant. 2-3 paragraphes en français.",
-  mistral:
-    "Tu es Mistral par Mistral AI — perspective européenne, fort sur la réglementation EU/belge, MiFID II, pragmatique et concis. 2-3 paragraphes en français.",
 };
 
 const MODEL_CALLERS = {
@@ -27,7 +25,6 @@ const MODEL_CALLERS = {
   gpt54: callGPT,
   gemini: callGemini,
   grok: callGrok,
-  mistral: callMistral,
 };
 
 router.post('/', async (req, res) => {
@@ -56,7 +53,7 @@ ${fundsText}
 
 Total alloué: ${funds.reduce((acc, f) => acc + (parseFloat(f.pct) || 0), 0)}%`;
 
-    const allModels = ['claude', 'gpt54', 'gemini', 'grok', 'mistral'];
+    const allModels = ['claude', 'gpt54', 'gemini', 'grok'];
 
     // Call all models in parallel with augmented system prompts
     const callPromises = allModels.map(async (modelId) => {

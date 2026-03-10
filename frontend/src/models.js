@@ -3,5 +3,5 @@ export const MODELS = [
   { id: 'gpt54',   name: 'GPT-4o',   company: 'OpenAI',    color: '#6EC9A9' },
   { id: 'gemini',  name: 'Gemini',   company: 'Google',    color: '#6EA9C9' },
   { id: 'grok',    name: 'Grok',     company: 'xAI',       color: '#C96E6E' },
-  { id: 'mistral', name: 'Mistral',  company: 'Mistral AI',color: '#A96EC9' },
+  // { id: 'mistral', name: 'Mistral',  company: 'Mistral AI',color: '#A96EC9' }, // désactivé temporairement
 ];
