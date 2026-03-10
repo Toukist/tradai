@@ -82,6 +82,12 @@ const MODEL_CALLERS = {
   grok: callGrok,
 };
 
+function buildSynthesisInput(results) {
+  return results
+    .map(([id, text]) => `=== ${id.toUpperCase()} ===\n${String(text).slice(0, 300)}`)
+    .join('\n\n');
+}
+
 router.post('/', async (req, res) => {
   try {
     const { profile, funds } = req.body;
@@ -121,19 +127,13 @@ Total alloué: ${funds.reduce((acc, f) => acc + (parseFloat(f.pct) || 0), 0)}%`;
     const results = await Promise.all(callPromises);
     const responses = Object.fromEntries(results);
 
-    // Tronquer chaque réponse à 600 chars pour limiter les tokens envoyés à Claude
-    const responsesText = results
-      .map(([id, text]) => `=== ${id.toUpperCase()} ===\n${text.slice(0, 600)}`)
-      .join('\n\n');
-
-    // Délai pour éviter le rate limit (Claude appelé 2x dans la même requête)
-    await new Promise(r => setTimeout(r, 2000));
+    const responsesText = buildSynthesisInput(results);
 
     const synthesisUser = `Portefeuille:\n${portfolioSummary}\n\nAnalyses (résumées):\n\n${responsesText}`;
 
     const synthesis = await safeCall(
-      () => callClaude(SYNTHESIS_PROMPT, synthesisUser),
-      'Synthesis'
+      () => callGPT(SYNTHESIS_PROMPT, synthesisUser),
+      'Synthesis-GPT'
     );
 
     return res.json({ responses, synthesis });

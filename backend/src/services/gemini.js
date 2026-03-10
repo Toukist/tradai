@@ -1,11 +1,12 @@
 const { GoogleGenAI } = require('@google/genai');
 
 const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const GEMINI_MODEL = 'gemini-2.5-pro';
 
 async function callModel(systemPrompt, userMessage) {
   try {
     const response = await client.models.generateContent({
-      model: 'gemini-2.5-pro-preview-03-25',
+      model: GEMINI_MODEL,
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       config: {
         systemInstruction: systemPrompt,
