@@ -29,7 +29,17 @@ app.use('/api/portfolio', portfolioRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    models: {
+      claude:  !!process.env.ANTHROPIC_API_KEY,
+      openai:  !!process.env.OPENAI_API_KEY,
+      gemini:  !!process.env.GEMINI_API_KEY,
+      grok:    !!process.env.GROK_API_KEY,
+      mistral: !!process.env.MISTRAL_API_KEY,
+    },
+  });
 });
 
 app.listen(PORT, () => {

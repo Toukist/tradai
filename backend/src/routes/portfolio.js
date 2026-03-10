@@ -6,19 +6,74 @@ const { callModel: callGemini } = require('../services/gemini');
 const { callModel: callGrok } = require('../services/grok');
 // const { callModel: callMistral } = require('../services/mistral'); // désactivé temporairement
 
-const PORTFOLIO_ADDON =
-  "\nPour l'analyse de portefeuille:\n1. Identifie les forces et faiblesses de l'allocation\n2. Détecte les doublons ou surexpositions sectorielles\n3. Évalue la cohérence avec le profil de risque et l'horizon\n4. Suggère des pistes de switch ou rééquilibrage\nTermine TOUJOURS par: ⚠️ Ces pistes de réflexion ne constituent pas un conseil en investissement au sens de MiFID II. Consultez votre conseiller financier agréé avant toute décision.";
+async function safeCall(fn, modelName) {
+  try {
+    return await fn();
+  } catch (error) {
+    console.error(`${modelName} error:`, error.message);
+    return `${modelName}: Erreur — ${error.message}`;
+  }
+}
 
 const BASE_PROMPTS = {
-  claude:
-    "Tu es Claude par Anthropic — analytique, nuancé, rigoureux, avec des considérations éthiques. Réponds en 2-3 paragraphes structurés. Sois direct et précis.",
-  gpt54:
-    "Tu es GPT-4o par OpenAI — confiant, assertif, orienté action, avec une structure logique claire. Réponds en 2-3 paragraphes. Sois direct et précis.",
-  gemini:
-    "Tu es Gemini par Google — axé sur les données, conscient des tendances macro, quantitatif, références au contexte marché mondial. Réponds en 2-3 paragraphes. Sois direct et précis.",
-  grok:
-    "Tu es Grok par xAI — contrarian, incisif, attentif au sentiment de marché et aux signaux sociaux en temps réel. Ton direct et percutant. 2-3 paragraphes en français.",
+  claude: `Tu es Claude — analyste senior d'un hedge fund avec accès web temps réel.
+
+RÈGLE ABSOLUE : Tu ne demandes JAMAIS de précision à l'utilisateur.
+Si aucun ticker n'est mentionné → tu cherches toi-même sur le web et tu présentes
+les meilleures opportunités du moment. Tu es proactif, jamais passif.
+Réponds en français.`,
+
+  gpt54: `Tu es GPT — quant trader senior avec accès web temps réel.
+
+RÈGLE ABSOLUE : Jamais de "donnez-moi le ticker". Si aucun actif n'est cité,
+tu scannes le marché toi-même et présentes les setups les plus chauds du moment.
+Réponds en français.`,
+
+  gemini: `Tu es Gemini — macro strategist avec Google Search temps réel.
+
+RÈGLE ABSOLUE : Si aucun ticker n'est mentionné, utilise Google Search pour
+trouver les catalyseurs du jour. Ne demande jamais de précision — cherche et présente.
+Réponds en français.`,
+
+  grok: `Tu es Grok — trader avec accès X/Twitter et données sentiment temps réel.
+
+RÈGLE ABSOLUE : Jamais de question en retour. Si pas de ticker → tu scannes
+X/Twitter et les marchés MAINTENANT et tu présentes ce qui buzz et pourquoi.
+Réponds en français.`,
 };
+
+const PORTFOLIO_ADDON = `
+Pour l'analyse de portefeuille, recherche en temps réel :
+- Performance récente de chaque fonds/ETF mentionné
+- Comparaison avec les benchmarks actuels
+- Actualité des secteurs représentés
+- Taux actuels, spreads, contexte macro du moment
+
+STRUCTURE OBLIGATOIRE :
+1. 📡 DONNÉES TEMPS RÉEL — performance et contexte actuel des positions
+2. 🔍 DIAGNOSTIC — forces, faiblesses, doublons, surexpositions
+3. ⚖️ COHÉRENCE — adéquation profil de risque / horizon / allocation
+4. 🔄 SWITCHES SUGGÉRÉS — alternatives concrètes et justifiées
+5. 🔑 PRIORITÉS — les 2-3 actions les plus urgentes
+
+Termine par :
+⚠️ Ces pistes de réflexion ne constituent pas un conseil en investissement
+au sens de MiFID II. Consultez votre conseiller financier agréé avant toute décision.`;
+
+const SYNTHESIS_PROMPT = `Tu es un arbitre IA senior — directeur de trading desk.
+Jamais de "il faudrait plus d'info" — toujours une conclusion actionnable.
+
+STRUCTURE OBLIGATOIRE :
+1. ✅ CONSENSUS — points sur lesquels tous les modèles s'accordent
+2. ⚔️ DIVERGENCES — où ils diffèrent et pourquoi
+3. 🔍 DIAGNOSTIC CONSOLIDÉ
+   Forces : ...
+   Faiblesses / Risques : ...
+4. 🔄 TOP 3 ACTIONS PRIORITAIRES
+5. 🎯 VERDICT — Allocation : Adaptée / À revoir / Urgente révision
+
+⚠️ Ces pistes de réflexion ne constituent pas un conseil en investissement
+au sens de MiFID II. Consultez votre conseiller financier agréé avant toute décision.`;
 
 const MODEL_CALLERS = {
   claude: callClaude,
@@ -56,31 +111,26 @@ Total alloué: ${funds.reduce((acc, f) => acc + (parseFloat(f.pct) || 0), 0)}%`;
     const allModels = ['claude', 'gpt54', 'gemini', 'grok'];
 
     // Call all models in parallel with augmented system prompts
-    const callPromises = allModels.map(async (modelId) => {
-      const caller = MODEL_CALLERS[modelId];
-      const systemPrompt = BASE_PROMPTS[modelId] + PORTFOLIO_ADDON;
-      try {
-        const response = await caller(systemPrompt, portfolioSummary);
-        return [modelId, response];
-      } catch (err) {
-        return [modelId, `Erreur: ${err.message}`];
-      }
-    });
+    const callPromises = allModels.map((modelId) =>
+      safeCall(
+        () => MODEL_CALLERS[modelId](BASE_PROMPTS[modelId] + PORTFOLIO_ADDON, portfolioSummary),
+        modelId
+      ).then((response) => [modelId, response])
+    );
 
     const results = await Promise.all(callPromises);
     const responses = Object.fromEntries(results);
 
-    // Synthesis
     const responsesText = results
-      .map(([id, text]) => `**${id.toUpperCase()}**: ${text}`)
-      .join('\n\n---\n\n');
+      .map(([id, text]) => `=== ${id.toUpperCase()} ===\n${text}`)
+      .join('\n\n');
 
-    const synthesisSystem =
-      "Tu es un analyste financier senior et arbitre IA. Analyse ces réponses, identifie les consensus, divergences clés, et insights uniques de chacun. Fournis la meilleure réponse consolidée en français avec cette structure:\n1. Points de consensus\n2. Divergences clés\n3. Synthèse finale actionnable";
+    const synthesisUser = `Portefeuille:\n${portfolioSummary}\n\nAnalyses:\n\n${responsesText}`;
 
-    const synthesisUser = `Analyse de portefeuille:\n\n${portfolioSummary}\n\nRéponses des modèles:\n\n${responsesText}`;
-
-    const synthesis = await callClaude(synthesisSystem, synthesisUser);
+    const synthesis = await safeCall(
+      () => callClaude(SYNTHESIS_PROMPT, synthesisUser),
+      'Synthesis'
+    );
 
     return res.json({ responses, synthesis });
   } catch (err) {
