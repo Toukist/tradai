@@ -9,8 +9,10 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS
+const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const frontendUrl = rawFrontendUrl.replace(/^(https?:\/\/)+/, (match) => match.slice(0, match.lastIndexOf('://') + 3));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: frontendUrl,
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
 }));
