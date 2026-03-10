@@ -1,8 +1,7 @@
 const OpenAI = require('openai');
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 async function callModel(systemPrompt, userMessage) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const response = await client.chat.completions.create({
     model: 'gpt-4o',
     messages: [

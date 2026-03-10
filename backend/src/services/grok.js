@@ -1,11 +1,10 @@
 const OpenAI = require('openai');
 
-const client = new OpenAI({
-  apiKey: process.env.GROK_API_KEY,
-  baseURL: 'https://api.x.ai/v1',
-});
-
 async function callModel(systemPrompt, userMessage) {
+  const client = new OpenAI({
+    apiKey: process.env.GROK_API_KEY,
+    baseURL: 'https://api.x.ai/v1',
+  });
   const response = await client.chat.completions.create({
     model: 'grok-3',
     messages: [
