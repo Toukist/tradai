@@ -9,6 +9,7 @@ import authRouter from './routes/auth.js';
 import stripeRouter from './routes/stripe.js';
 import { rateLimiter } from './middleware/rateLimit.js';
 import { checkDatabase } from './db/index.js';
+import { runMigrations } from './db/migrate.js';
 
 dotenv.config();
 
@@ -49,4 +50,7 @@ app.use('/api/etf', etfRouter);
 app.use('/api/funds', fundsRouter);
 
 const PORT = process.env.PORT || 3001;
+
+await runMigrations();
+
 app.listen(PORT, () => console.log(`TradAI backend running on port ${PORT}`));
