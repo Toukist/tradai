@@ -1,5 +1,6 @@
 import pool from '../db/index.js';
 import { authenticateToken } from './auth.js';
+import { isBootstrapUserId, getBootstrapUser } from '../utils/bootstrapAccount.js';
 
 const PLAN_LIMITS = {
   free: 5,
@@ -11,6 +12,11 @@ const PLAN_LIMITS = {
 export function checkSubscription(req, res, next) {
   authenticateToken(req, res, async () => {
     try {
+      if (isBootstrapUserId(req.userId)) {
+        req.user = getBootstrapUser();
+        return next();
+      }
+
       const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
       const user = result.rows[0];
 
