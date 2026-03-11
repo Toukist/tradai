@@ -4,6 +4,7 @@ const cors = require('cors');
 const rateLimit = require('./middleware/rateLimit');
 const debateRouter = require('./routes/debate');
 const portfolioRouter = require('./routes/portfolio');
+const { checkDatabase } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,10 +29,16 @@ app.use('/api/debate', debateRouter);
 app.use('/api/portfolio', portfolioRouter);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const databaseOk = await checkDatabase();
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    database: {
+      configured: !!process.env.DATABASE_URL,
+      connected: databaseOk,
+    },
     models: {
       claude:  !!process.env.ANTHROPIC_API_KEY,
       openai:  !!process.env.OPENAI_API_KEY,
