@@ -16,8 +16,30 @@ dotenv.config();
 const app = express();
 const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 const frontendUrl = rawFrontendUrl.replace(/^(https?:\/\/)+/, (match) => match.slice(0, match.lastIndexOf('://') + 3));
+const allowedOrigins = new Set([
+  frontendUrl.replace(/\/$/, ''),
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://heartfelt-quietude-production.up.railway.app',
+]);
 
-app.use(cors({ origin: frontendUrl }));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const normalizedOrigin = String(origin).replace(/\/$/, '');
+    if (allowedOrigins.has(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.options('*', cors());
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
