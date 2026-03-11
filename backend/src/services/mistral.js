@@ -1,16 +1,24 @@
-const { Mistral } = require('@mistralai/mistralai');
+import { Mistral } from '@mistralai/mistralai';
 
-async function callModel(systemPrompt, userMessage) {
-  const client = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
-  const response = await client.chat.complete({
-    model: 'mistral-large-latest',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ],
-    maxTokens: 1024,
-  });
-  return response.choices[0].message.content;
+function getClient() {
+  return new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
 }
 
-module.exports = { callModel };
+export async function callModel(systemPrompt, userMessage) {
+  try {
+    const client = getClient();
+    const response = await client.chat.complete({
+      model: 'mistral-large-latest',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      maxTokens: 1200,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || 'Aucune réponse générée.';
+  } catch (error) {
+    console.error('Mistral error:', error.message);
+    return `Mistral: Erreur — ${error.message}`;
+  }
+}

@@ -1,62 +1,44 @@
 import { useState } from 'react';
-import DebateModule from './components/DebateModule.jsx';
-import PortfolioModule from './components/PortfolioModule.jsx';
-
-const TABS = [
-  { id: 'debate',    label: 'Débat IA' },
-  { id: 'portfolio', label: 'Analyse Portefeuille' },
-];
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
+import Footer from './components/layout/Footer';
+import TradingDesk from './components/trading/TradingDesk';
+import AdvisoryDesk from './components/advisory/AdvisoryDesk';
+import PricingPage from './components/auth/PricingPage';
+import AffiliateBar from './components/shared/AffiliateBar';
+import { useAuth } from './hooks/useAuth';
+import { useSubscription } from './hooks/useSubscription';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('debate');
+  const [activeDesk, setActiveDesk] = useState('trading');
+  const [authMode, setAuthMode] = useState('login');
+  const auth = useAuth();
+  const subscription = useSubscription(auth.user);
 
   return (
-    <div className="min-h-screen" style={{ background: '#080A0E' }}>
-      {/* Header */}
-      <header className="border-b border-white/10 px-6 py-5">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
-              Trad<span style={{ color: '#C9A96E' }}>AI</span>
-            </h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              5 IA. 1 synthèse. La meilleure décision.
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#080A0E] text-[#E0DDD6]">
+      <Header activeDesk={activeDesk} setActiveDesk={setActiveDesk} user={auth.user} onLogout={auth.logout} />
+      {auth.user?.plan === 'free' && <AffiliateBar />}
 
-          {/* Tabs */}
-          <nav className="flex gap-2">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-white/10 text-white ring-1 ring-white/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
+        <Sidebar
+          activeDesk={activeDesk}
+          setActiveDesk={setActiveDesk}
+          user={auth.user}
+          auth={auth}
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          subscription={subscription}
+        />
 
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {activeTab === 'debate'    && <DebateModule />}
-        {activeTab === 'portfolio' && <PortfolioModule />}
-      </main>
+        <main className="space-y-6">
+          {activeDesk === 'trading' && <TradingDesk user={auth.user} token={auth.token} />}
+          {activeDesk === 'advisory' && <AdvisoryDesk user={auth.user} token={auth.token} />}
+          {activeDesk === 'pricing' && <PricingPage user={auth.user} token={auth.token} />}
+        </main>
+      </div>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 px-6 py-4 mt-12">
-        <p className="text-center text-xs text-gray-600">
-          TradAI fournit des pistes de réflexion uniquement. Ne constitue pas un conseil en
-          investissement au sens de MiFID II. Consultez un conseiller financier agréé avant
-          toute décision d'investissement.
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 }

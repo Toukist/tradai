@@ -9,21 +9,17 @@ import { advisoryPersonas } from '../personas/advisory.js';
 
 const router = express.Router();
 
-router.post('/', checkSubscription, async (req, res) => {
+router.post('/compare', checkSubscription, async (req, res) => {
   try {
-    const { profile, funds = [], question } = req.body;
-    if (!profile || !Array.isArray(funds) || !funds.length) {
-      return res.status(400).json({ error: 'Les champs profile et funds sont requis.' });
+    const { etfs = [], profile, horizon, amount } = req.body;
+
+    if (!Array.isArray(etfs) || !etfs.length) {
+      return res.status(400).json({ error: 'etfs is required' });
     }
 
-    const fundLines = funds
-      .map((fund) => `- ${fund.name} (${fund.ticker || fund.isin || fund.type || 'N/A'}): ${fund.pct || 0}%`)
-      .join('\n');
-
-    const userMsg = question || `Analyse ce portefeuille pour un profil ${profile.risk || profile}, horizon ${profile.horizon || 'non précisé'}, montant ${profile.amount || 'N/A'} ${profile.currency || 'EUR'}.
-Portefeuille:\n${fundLines}
-
-Analyse demandée : performance, cohérence d'allocation, concentration, alternatives, angle fiscal belge, priorités d'action.`;
+    const etfList = etfs.map((etf) => `${etf.name} (${etf.ticker || etf.isin || 'N/A'})`).join(', ');
+    const userMsg = `Compare ces ETFs pour un profil ${profile}, horizon ${horizon}, montant ${amount}€: ${etfList}.
+Analyse: performance, TER, tracking error, liquidité, fiscalité belge, recommandation finale.`;
 
     const calls = [
       safeCall(() => anthropic.callModel(advisoryPersonas.claude, userMsg), 'Claude'),
@@ -34,11 +30,9 @@ Analyse demandée : performance, cohérence d'allocation, concentration, alterna
     const [claudeRes, geminiRes, mistralRes] = await Promise.all(calls);
     const responses = { claude: claudeRes, gemini: geminiRes, mistral: mistralRes };
 
-    const synthPrompt = `Tu es un directeur advisory desk senior.
-Synthétise ces 3 analyses en diagnostic consolidé.
-STRUCTURE : 1. Consensus 2. Divergences 3. Forces/faiblesses 4. Top 3 actions prioritaires 5. Disclaimer MiFID II.
+    const synthPrompt = `Tu es un analyste ETF senior. Synthétise ces 3 analyses en recommandation finale.
+STRUCTURE: 1. Consensus 2. Divergences 3. ETF recommandé avec justification 4. Disclaimer MiFID II.
 Réponds en français.`;
-
     const synthesis = await safeCall(
       () => openai.callModel(synthPrompt, JSON.stringify(responses).slice(0, 2000)),
       'Synthesis'
@@ -46,7 +40,7 @@ Réponds en français.`;
 
     return res.json({ responses, synthesis });
   } catch (error) {
-    console.error('[portfolio] Error:', error.message);
+    console.error('[etf] Error:', error.message);
     return res.status(500).json({ error: 'Erreur serveur' });
   }
 });

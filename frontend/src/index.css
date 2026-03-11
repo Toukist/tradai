@@ -3,10 +3,44 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
   body {
     background-color: #080A0E;
     color: #E5E7EB;
     font-family: 'Inter', system-ui, sans-serif;
+    margin: 0;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-white/10 bg-[#0D0F14] shadow-[0_12px_40px_rgba(0,0,0,0.25)];
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-[#11141B] px-4 py-3 text-sm text-white outline-none transition focus:border-[#C9A96E] focus:ring-2 focus:ring-[#C9A96E]/20;
+  }
+
+  .label {
+    @apply mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#7A7F89];
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl border border-[#C9A96E] bg-[#C9A96E] px-4 py-2.5 text-sm font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/5;
   }
 }
 

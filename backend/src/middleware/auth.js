@@ -1,10 +1,17 @@
-// Middleware d'authentification (extensible)
-// Actuellement non utilisé en production — à compléter selon les besoins
-module.exports = function auth(req, res, next) {
-  // Exemple: vérification d'une API key interne
-  // const apiKey = req.headers['x-api-key'];
-  // if (apiKey !== process.env.INTERNAL_API_KEY) {
-  //   return res.status(401).json({ error: 'Non autorisé' });
-  // }
-  next();
-};
+import jwt from 'jsonwebtoken';
+
+export function authenticateToken(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token requis' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'Token invalide' });
+  }
+}

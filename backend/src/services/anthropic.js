@@ -1,8 +1,11 @@
-const Anthropic = require('@anthropic-ai/sdk');
+import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
-async function callModel(systemPrompt, userMessage) {
+export async function callModel(systemPrompt, userMessage) {
+  const client = getClient();
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1000,
@@ -11,19 +14,17 @@ async function callModel(systemPrompt, userMessage) {
     messages: [{ role: 'user', content: userMessage }],
   });
 
-  // First pass — collect text blocks
   let fullText = response.content
-    .filter(b => b.type === 'text')
-    .map(b => b.text)
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
     .join('\n');
 
-  // If Claude used the web search tool, do a follow-up call to get the final answer
   if (response.stop_reason === 'tool_use') {
-    const toolUseBlocks = response.content.filter(b => b.type === 'tool_use');
-    const toolResults = toolUseBlocks.map(block => ({
+    const toolUseBlocks = response.content.filter((block) => block.type === 'tool_use');
+    const toolResults = toolUseBlocks.map((block) => ({
       type: 'tool_result',
       tool_use_id: block.id,
-      content: 'Search executed successfully.',
+      content: 'Search executed.',
     }));
 
     const followUp = await client.messages.create({
@@ -39,12 +40,10 @@ async function callModel(systemPrompt, userMessage) {
     });
 
     fullText = followUp.content
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
       .join('\n');
   }
 
   return fullText.trim() || 'Aucune réponse générée.';
 }
-
-module.exports = { callModel };

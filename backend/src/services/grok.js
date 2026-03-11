@@ -1,19 +1,24 @@
-const OpenAI = require('openai');
+import OpenAI from 'openai';
 
-async function callModel(systemPrompt, userMessage) {
-  const client = new OpenAI({
-    apiKey: process.env.GROK_API_KEY,
-    baseURL: 'https://api.x.ai/v1',
-  });
-  const response = await client.chat.completions.create({
-    model: 'grok-3',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ],
-    max_tokens: 1024,
-  });
-  return response.choices[0].message.content;
+function getClient() {
+  return new OpenAI({ apiKey: process.env.GROK_API_KEY, baseURL: 'https://api.x.ai/v1' });
 }
 
-module.exports = { callModel };
+export async function callModel(systemPrompt, userMessage) {
+  try {
+    const client = getClient();
+    const response = await client.chat.completions.create({
+      model: 'grok-3',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: 1200,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || 'Aucune réponse générée.';
+  } catch (error) {
+    console.error('Grok error:', error.message);
+    return `Grok: Erreur — ${error.message}`;
+  }
+}

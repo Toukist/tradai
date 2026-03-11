@@ -1,5 +1,6 @@
-const { Pool } = require('pg');
+import pg from 'pg';
 
+const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
 
 const pool = connectionString
@@ -9,7 +10,7 @@ const pool = connectionString
     })
   : null;
 
-async function query(text, params) {
+export async function query(text, params = []) {
   if (!pool) {
     throw new Error('DATABASE_URL manquante');
   }
@@ -17,7 +18,7 @@ async function query(text, params) {
   return pool.query(text, params);
 }
 
-async function checkDatabase() {
+export async function checkDatabase() {
   if (!pool) {
     return false;
   }
@@ -31,8 +32,6 @@ async function checkDatabase() {
   }
 }
 
-module.exports = {
-  pool,
+export default {
   query,
-  checkDatabase,
 };

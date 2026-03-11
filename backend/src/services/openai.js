@@ -1,12 +1,16 @@
-const OpenAI = require('openai');
+import OpenAI from 'openai';
 
-async function callModel(systemPrompt, userMessage) {
+function getClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+
+export async function callModel(systemPrompt, userMessage) {
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = getClient();
     const freshnessHint = [
       `Date actuelle UTC: ${new Date().toISOString()}`,
       'Utilise obligatoirement la recherche web pour récupérer les données les plus récentes.',
-      'Si un prix, une date, un consensus ou un catalyseur n est pas vérifié via le web, indique-le explicitement au lieu de l inventer.',
+      'Si une donnée de marché n est pas vérifiée via le web, indique-le explicitement au lieu de l inventer.',
     ].join('\n');
 
     const response = await client.responses.create({
@@ -14,14 +18,12 @@ async function callModel(systemPrompt, userMessage) {
       tools: [{ type: 'web_search_preview' }],
       instructions: systemPrompt,
       input: `${freshnessHint}\n\n${userMessage}`,
-      max_output_tokens: 900,
+      max_output_tokens: 1200,
     });
 
     return response.output_text?.trim() || 'Aucune réponse générée.';
   } catch (error) {
     console.error('OpenAI error:', error.message);
-    return `OpenAI: Erreur — ${error.message}`;
+    return `GPT: Erreur — ${error.message}`;
   }
 }
-
-module.exports = { callModel };

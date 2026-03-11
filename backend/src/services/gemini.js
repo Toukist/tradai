@@ -1,22 +1,26 @@
-const { GoogleGenAI } = require('@google/genai');
+import { GoogleGenAI } from '@google/genai';
 
-const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const GEMINI_MODEL = 'gemini-2.5-pro';
 
-async function callModel(systemPrompt, userMessage) {
+function getClient() {
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
+
+export async function callModel(systemPrompt, userMessage) {
   try {
+    const client = getClient();
     const response = await client.models.generateContent({
       model: GEMINI_MODEL,
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
       config: {
         systemInstruction: systemPrompt,
         tools: [{ googleSearch: {} }],
-        maxOutputTokens: 2000,
+        maxOutputTokens: 1200,
       },
     });
 
     const text = response.candidates?.[0]?.content?.parts
-      ?.map(p => p.text || '')
+      ?.map((part) => part.text || '')
       .join('\n');
 
     return text?.trim() || 'Aucune réponse générée.';
@@ -25,5 +29,3 @@ async function callModel(systemPrompt, userMessage) {
     return `Gemini: Erreur — ${error.message}`;
   }
 }
-
-module.exports = { callModel };
