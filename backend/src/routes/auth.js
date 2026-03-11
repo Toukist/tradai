@@ -12,6 +12,7 @@ import {
 } from '../utils/bootstrapAccount.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'tradai-bootstrap-secret-change-me';
 
 function signToken(user) {
   return jwt.sign(
@@ -21,7 +22,7 @@ function signToken(user) {
       plan: user.plan,
       name: user.name,
     },
-    process.env.JWT_SECRET,
+    JWT_SECRET,
     { expiresIn: '30d' }
   );
 }
