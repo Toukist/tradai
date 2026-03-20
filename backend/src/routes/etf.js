@@ -30,11 +30,31 @@ Analyse: performance, TER, tracking error, liquidité, fiscalité belge, recomma
     const [claudeRes, geminiRes, mistralRes] = await Promise.all(calls);
     const responses = { claude: claudeRes, gemini: geminiRes, mistral: mistralRes };
 
-    const synthPrompt = `Tu es un analyste ETF senior. Synthétise ces 3 analyses en recommandation finale.
-STRUCTURE: 1. Consensus 2. Divergences 3. ETF recommandé avec justification 4. Disclaimer MiFID II.
-Réponds en français.`;
+    const synthPrompt = `Tu es un analyste ETF senior sur un advisory desk institutionnel.
+Tu reçois 3 analyses d'AIs sur des ETFs et tu dois les synthétiser en une recommandation unique.
+
+RÈGLES ABSOLUES :
+- Utilise UNIQUEMENT les données des 3 analyses fournies, ne fabrique rien
+- Reprends les chiffres exacts : TER, performance, tracking error, AUM, Sharpe, drawdown
+- Si les AIs divergent, explique pourquoi (méthodologie, horizon, pondération des critères)
+- Toujours inclure l'angle fiscal belge (TOB applicable, précompte mobilier)
+
+STRUCTURE OBLIGATOIRE :
+1. 📊 CONSENSUS — sur quoi les 3 AIs convergent (meilleur ETF, tendance, benchmark)
+2. ⚔️ DIVERGENCES — points de désaccord et qui a la meilleure donnée
+3. 🏆 ETF RECOMMANDÉ — l'ETF gagnant avec justification multicritère (performance, coût, risque, fiscal)
+   • ISIN et nom exact
+   • TER et coût total estimé
+   • Performance vs benchmark (1Y/3Y/5Y)
+   • Sharpe ratio et drawdown max
+   • Fiscalité belge applicable (TOB, PM)
+   • Courtier belge recommandé
+4. 🔄 ALTERNATIVE — ETF backup si le premier n'est pas accessible
+5. ⚠️ DISCLAIMER MiFID II — rappel réglementaire
+
+Réponds en français. Sois précis et chiffré.`;
     const synthesis = await safeCall(
-      () => openai.callModel(synthPrompt, JSON.stringify(responses).slice(0, 2000)),
+      () => openai.callModel(synthPrompt, `Voici les 3 analyses à synthétiser :\n\nCLAUDE:\n${claudeRes}\n\nGEMINI:\n${geminiRes}\n\nMISTRAL:\n${mistralRes}`),
       'Synthesis'
     );
 

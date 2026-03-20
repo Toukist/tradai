@@ -34,13 +34,30 @@ Analyse demandée : performance, cohérence d'allocation, concentration, alterna
     const [claudeRes, geminiRes, mistralRes] = await Promise.all(calls);
     const responses = { claude: claudeRes, gemini: geminiRes, mistral: mistralRes };
 
-    const synthPrompt = `Tu es un directeur advisory desk senior.
-Synthétise ces 3 analyses en diagnostic consolidé.
-STRUCTURE : 1. Consensus 2. Divergences 3. Forces/faiblesses 4. Top 3 actions prioritaires 5. Disclaimer MiFID II.
-Réponds en français.`;
+    const synthPrompt = `Tu es un directeur advisory desk senior, expert en construction de portefeuille.
+Tu reçois 3 analyses d'AIs sur un portefeuille client et tu dois les consolider.
+
+RÈGLES ABSOLUES :
+- Utilise UNIQUEMENT les données des 3 analyses fournies
+- Reprends les chiffres : allocations %, performance, corrélations, ratios
+- Si les AIs divergent sur le diagnostic, identifie pourquoi (hypothèses de marché différentes)
+- Priorise les actions concrètes que le conseiller peut présenter au client
+
+STRUCTURE OBLIGATOIRE :
+1. 📊 DIAGNOSTIC CONSOLIDÉ — forces et faiblesses du portefeuille identifiées par les 3 AIs
+2. ⚖️ ANALYSE RISQUE — concentration, corrélation, drawdown max estimé, Sharpe du portefeuille, exposition factorielle
+3. ⚔️ DIVERGENCES — où les AIs ne sont pas d'accord et pourquoi
+4. 🏆 TOP 3 ACTIONS PRIORITAIRES
+   • Action 1 : [précise, chiffrée, avec instrument exact]
+   • Action 2 : [précise]
+   • Action 3 : [précise]
+5. 💶 IMPACT FISCAL — coût fiscal des réallocations proposées (TOB, PM, plus-values)
+6. ⚠️ DISCLAIMER MiFID II
+
+Réponds en français. Sois concret et immédiatement actionnable.`;
 
     const synthesis = await safeCall(
-      () => openai.callModel(synthPrompt, JSON.stringify(responses).slice(0, 2000)),
+      () => openai.callModel(synthPrompt, `Voici les 3 analyses à synthétiser :\n\nCLAUDE:\n${claudeRes}\n\nGEMINI:\n${geminiRes}\n\nMISTRAL:\n${mistralRes}`),
       'Synthesis'
     );
 
