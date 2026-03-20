@@ -1,29 +1,36 @@
 import { GoogleGenAI } from '@google/genai';
 
-const GEMINI_MODEL = 'gemini-2.5-pro';
-
-function getClient() {
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-}
+const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function callModel(systemPrompt, userMessage) {
   try {
-    const client = getClient();
-    const response = await client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+    const result = await client.models.generateContent({
+      model: 'gemini-2.5-pro-preview-03-25',
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: `${systemPrompt}\n\n${userMessage}` }],
+        },
+      ],
       config: {
-        systemInstruction: systemPrompt,
         tools: [{ googleSearch: {} }],
-        maxOutputTokens: 1200,
+        maxOutputTokens: 1500,
       },
     });
 
-    const text = response.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || '')
-      .join('\n');
+    // Try multiple response paths
+    const text =
+      result?.candidates?.[0]?.content?.parts?.map(p => p.text || '').filter(Boolean).join('\n') ||
+      result?.text ||
+      result?.response?.text?.() ||
+      null;
 
-    return text?.trim() || 'Aucune réponse générée.';
+    if (!text) {
+      console.error('Gemini: empty response, raw:', JSON.stringify(result).slice(0, 300));
+      return 'Gemini: Pas de réponse (vérifier clé API ou quota).';
+    }
+
+    return text.trim();
   } catch (error) {
     console.error('Gemini error:', error.message);
     return `Gemini: Erreur — ${error.message}`;

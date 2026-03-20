@@ -8,23 +8,26 @@ const PLANS = [
     cta: 'Commencer gratuitement',
   },
   {
-    id: 'trader', name: 'Trader', price: '€24', period: '/mois',
+    id: 'trader', name: 'Trader', price: '€72', period: '/mois',
     color: '#C9A96E',
     features: ['Questions illimitées', '3 marchés Trading Desk', 'Web search temps réel', 'Sans publicité'],
     cta: 'Devenir Trader',
     highlighted: true,
   },
   {
-    id: 'advisor', name: 'Advisor', price: '€59', period: '/mois',
+    id: 'advisor', name: 'Advisor', price: '€177', period: '/mois',
     color: '#6EC9A9',
     features: ['Tout Trader inclus', 'Advisory Desk complet', 'Analyse ETF & Fonds', 'Switch Optimizer', 'Angle fiscal belge'],
     cta: 'Devenir Advisor',
   },
   {
-    id: 'team', name: 'Team', price: '€199', period: '/mois',
+    id: 'team', name: 'Team', price: '€1799', period: '/mois',
     color: '#6EA9C9',
     features: ['Tout Advisor inclus', 'Jusqu\'à 10 utilisateurs', 'White label possible', 'Support prioritaire'],
     cta: 'Contacter l\'équipe',
+    displayName: 'All In',
+    promoLabel: 'OFFRE ALL IN',
+    promoText: 'Formule tout compris pour cabinets et équipes.',
   },
 ];
 
@@ -52,10 +55,18 @@ export default function PricingPage({ token }) {
                 POPULAIRE
               </div>
             )}
-            <div className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: plan.color }}>{plan.name}</div>
+            {plan.promoLabel && (
+              <div className="mb-3 inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em]" style={{ borderColor: plan.color, color: plan.color }}>
+                {plan.promoLabel}
+              </div>
+            )}
+            <div className="text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: plan.color }}>{plan.displayName || plan.name}</div>
             <div className="mt-4 text-4xl font-bold text-white">
               {plan.price}<span className="text-base font-normal text-[#6E7480]">{plan.period}</span>
             </div>
+            {plan.promoText && (
+              <p className="mt-3 text-sm leading-6 text-[#9EA4AF]">{plan.promoText}</p>
+            )}
             <ul className="mt-6 space-y-3 text-sm text-[#A1A7B2]">
               {plan.features.map((feature) => (
                 <li key={feature} className="flex gap-2"><span style={{ color: plan.color }}>✓</span><span>{feature}</span></li>

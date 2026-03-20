@@ -22,10 +22,6 @@ const marketPersonas = {
   european: europeanPersonas,
 };
 
-function buildSynthesisPayload(results) {
-  return results.map((result) => `${result.modelId}: ${String(result.text).slice(0, 450)}`).join('\n\n');
-}
-
 router.post('/', checkSubscription, async (req, res) => {
   try {
     const { question, market = 'global' } = req.body;
@@ -36,29 +32,81 @@ router.post('/', checkSubscription, async (req, res) => {
     const services = marketServices[market] || marketServices.global;
     const personas = marketPersonas[market] || marketPersonas.global;
 
+    // Call 3 AIs in parallel
     const calls = Object.entries(services).map(([modelId, service]) =>
-      safeCall(() => service.callModel(personas[modelId], question), modelId)
-        .then((text) => ({ modelId, text }))
+      safeCall(
+        () => service.callModel(personas[modelId], question),
+        modelId
+      ).then(text => ({ modelId, text: text || `${modelId}: pas de réponse` }))
     );
 
     const results = await Promise.all(calls);
+
+    // Build responses - ensure no undefined values
     const responses = {};
-    results.forEach((result) => {
-      responses[result.modelId] = result.text;
+    results.forEach(r => {
+      responses[r.modelId] = r.text || `${r.modelId}: pas de réponse`;
     });
 
-    const synthPrompt = `Tu es un directeur de trading desk — arbitre senior.
-Tu reçois 3 analyses d'AIs sur une question de trading.
-RÈGLE : Toujours une conclusion actionnable. Jamais de "il faudrait plus d'info".
-STRUCTURE OBLIGATOIRE:
-1. 📡 CONSENSUS — ce sur quoi toutes les AIs s'accordent
-2. ⚔️ DIVERGENCES — où elles diffèrent et pourquoi
-3. 🏆 MEILLEUR SETUP — le trade le plus convaincant
-4. 🔑 VERDICT FINAL — entrée, stop, target, conviction /10
-Réponds en français.`;
+    // Log for debugging
+    console.log('Responses collected:', Object.keys(responses).map(k => `${k}: ${responses[k].length} chars`));
 
-    const synthMessage = `Question: "${question}"\n\n${buildSynthesisPayload(results)}`;
-    const synthesis = await safeCall(() => openai.callModel(synthPrompt, synthMessage), 'Synthesis');
+    // Build a rich synthesis message with all 3 responses clearly labeled
+    const synthMessage = `
+Tu dois synthétiser ces 3 réponses d'analystes IA. 
+UTILISE UNIQUEMENT le contenu ci-dessous. Ne fais PAS de recherche.
+Ne dis JAMAIS que les infos ne sont pas disponibles — elles sont là, lis-les.
+
+=== QUESTION POSÉE ===
+${question}
+
+=== RÉPONSE CLAUDE ===
+${responses.claude || responses.gpt54 || 'Non disponible'}
+
+=== RÉPONSE GPT ===
+${responses.gpt54 || responses.grok || 'Non disponible'}
+
+=== RÉPONSE GEMINI/MISTRAL ===
+${responses.gemini || responses.mistral || 'Non disponible'}
+
+Synthétise maintenant ces 3 réponses en suivant la structure obligatoire.
+Les données sont dans les réponses ci-dessus — extrais-les et compile-les.
+`;
+
+    const synthSystemPrompt = `Tu es un directeur de trading desk — arbitre senior.
+Tu reçois 3 analyses d'AIs et tu dois les synthétiser.
+
+RÈGLES ABSOLUES :
+- Utilise UNIQUEMENT le contenu des 3 réponses fournies
+- Ne fais PAS de recherche web — les données sont déjà là
+- Ne dis JAMAIS "informations non disponibles" — si une IA l'a trouvé, utilise-le
+- Reprends les tickers, prix, niveaux exacts mentionnés dans les réponses
+- Si une réponse est vide ou en erreur, ignore-la et synthétise les autres
+
+STRUCTURE OBLIGATOIRE :
+1. 📡 CONSENSUS — sur quoi toutes les AIs s'accordent (liste les points)
+2. ⚔️ DIVERGENCES — où elles diffèrent (sois précis)
+3. 🏆 MEILLEUR SETUP — le trade/info le plus concret et actionnable
+4. 🔑 VERDICT FINAL — entrée, stop, target (repris des réponses), conviction /10
+
+Réponds en français. Sois concret et direct.`;
+
+    // Call Claude WITHOUT web search for synthesis
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const synthClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const synthResponse = await synthClient.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      system: synthSystemPrompt,
+      messages: [{ role: 'user', content: synthMessage }],
+      // NO tools here — synthesis must use provided content only
+    });
+
+    const synthesis = synthResponse.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n')
+      .trim() || 'Synthèse indisponible.';
 
     return res.json({ responses, synthesis, market });
   } catch (error) {

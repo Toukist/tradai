@@ -4,7 +4,7 @@ export const BOOTSTRAP_EMAIL = 'corentin.istace@hotmail.com';
 const BOOTSTRAP_USER_ID = 'bootstrap-corentin-all-in';
 const BOOTSTRAP_NAME = 'Corentin Istace';
 const BOOTSTRAP_PLAN = 'team';
-const BOOTSTRAP_PASSWORD_HASH = '$2a$10$cV5DJkFX8SSGanQ/aX5YgeBXhW8jO.jgPpb6XuVPRzkVyc84fEuFq';
+const BOOTSTRAP_PASSWORD_HASH = '$2a$10$QjH6qE5QmLsDHM9KQnPL5.k4SslTXaTx6pqgzXw1hzQbrBYAkBBvy';
 
 export function isBootstrapEmail(email = '') {
   return String(email).trim().toLowerCase() === BOOTSTRAP_EMAIL;
