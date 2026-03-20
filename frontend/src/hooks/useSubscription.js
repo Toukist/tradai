@@ -1,6 +1,12 @@
 export function useSubscription(user) {
   const plan = user?.plan || 'free';
   const questionsToday = user?.questions_today || 0;
+  const labels = {
+    free: 'FREE',
+    trader: 'TRADER',
+    advisor: 'ADVISOR',
+    team: 'ALL IN',
+  };
 
   const limits = {
     free: 5,
@@ -18,6 +24,6 @@ export function useSubscription(user) {
     limit,
     remaining,
     isPaid: plan !== 'free',
-    label: plan.toUpperCase(),
+    label: labels[plan] || plan.toUpperCase(),
   };
 }

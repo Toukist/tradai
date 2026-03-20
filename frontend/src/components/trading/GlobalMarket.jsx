@@ -1,23 +1,40 @@
 import { useState } from 'react';
 import { api } from '../../utils/api';
 import AICard from '../shared/AICard';
+import PromptPresetSelector from '../shared/PromptPresetSelector';
 import SynthesisCard from '../shared/SynthesisCard';
 import ModelSelector from '../shared/ModelSelector';
+import { useTradingPromptPreset } from '../../hooks/useTradingPromptPreset';
 
-const DEFAULT_QUESTION = 'Scan le marché mondial maintenant et donne-moi le meilleur setup risk-on/risk-off du jour avec niveaux précis.';
+const MARKET_ID = 'global';
 
 export default function GlobalMarket({ user, token }) {
-  const [question, setQuestion] = useState(DEFAULT_QUESTION);
+  const isAllIn = user?.plan === 'team';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const {
+    presets,
+    selectedPresetId,
+    appliedPresetId,
+    appliedPreset,
+    question,
+    setQuestion,
+    handlePresetSelect,
+    handlePresetApply,
+  } = useTradingPromptPreset(MARKET_ID);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const result = await api.debate({ question, market: 'global' }, token);
+      const result = await api.debate({
+        question,
+        market: 'global',
+        promptPresetId: isAllIn ? appliedPreset?.id : undefined,
+        promptPresetLabel: isAllIn ? appliedPreset?.label : undefined,
+      }, token);
       setData(result);
     } catch (err) {
       setError(err.message);
@@ -39,6 +56,20 @@ export default function GlobalMarket({ user, token }) {
         </div>
         {!user && <p className="mt-4 rounded-xl border border-[#C9A96E]/20 bg-[#C9A96E]/10 px-4 py-3 text-sm text-[#E7D0A1]">Connecte-toi pour lancer des requêtes live.</p>}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {isAllIn ? (
+            <PromptPresetSelector
+              presets={presets}
+              selectedPresetId={selectedPresetId}
+              appliedPresetId={appliedPresetId}
+              onSelectPreset={handlePresetSelect}
+              onApplyPreset={handlePresetApply}
+            />
+          ) : (
+            <div className="rounded-2xl border border-[#6EA9C9]/20 bg-[#6EA9C9]/10 p-4 text-sm leading-6 text-[#D8E6F0]">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6EA9C9]">Réservé All In</div>
+              <p className="mt-2">Les prompts experts par marché sont disponibles uniquement sur l’offre All In. Tu peux continuer à poser une question libre ci-dessous.</p>
+            </div>
+          )}
           <div>
             <label className="label">Question</label>
             <textarea className="input min-h-[130px]" value={question} onChange={(e) => setQuestion(e.target.value)} />
@@ -56,7 +87,7 @@ export default function GlobalMarket({ user, token }) {
             <AICard key={key} title={key.toUpperCase()} content={value} />
           ))}
           <div className="xl:col-span-3">
-            <SynthesisCard title="Synthèse Global Market" content={data.synthesis} />
+            <SynthesisCard title={`Synthèse Global Market${appliedPreset?.label ? ` · ${appliedPreset.label}` : ''}`} content={data.synthesis} />
           </div>
         </section>
       )}

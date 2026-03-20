@@ -12,7 +12,6 @@ const PLANS = [
     color: '#C9A96E',
     features: ['Questions illimitées', '3 marchés Trading Desk', 'Web search temps réel', 'Sans publicité'],
     cta: 'Devenir Trader',
-    highlighted: true,
   },
   {
     id: 'advisor', name: 'Advisor', price: '€177', period: '/mois',
@@ -23,11 +22,12 @@ const PLANS = [
   {
     id: 'team', name: 'Team', price: '€1799', period: '/mois',
     color: '#6EA9C9',
-    features: ['Tout Advisor inclus', 'Jusqu\'à 10 utilisateurs', 'White label possible', 'Support prioritaire'],
+    features: ['Tout Advisor inclus', 'Prompts experts Trading exclusifs par marché', 'Prompts Advisory premium sur la roadmap All In', 'Jusqu\'à 10 utilisateurs', 'White label possible', 'Support prioritaire'],
     cta: 'Contacter l\'équipe',
     displayName: 'All In',
     promoLabel: 'OFFRE ALL IN',
-    promoText: 'Formule tout compris pour cabinets et équipes.',
+    promoText: 'Formule tout compris pour cabinets et équipes, avec prompts experts réservés à l’offre All In.',
+    highlighted: true,
   },
 ];
 
@@ -45,6 +45,12 @@ export default function PricingPage({ token }) {
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[#727987]">
           Passez au niveau supérieur de l’analyse financière multi-IA avec Trading Desk, Advisory Desk, web search temps réel et flux de travail Stripe.
         </p>
+        <div className="mx-auto mt-5 max-w-3xl rounded-2xl border border-[#6EA9C9]/30 bg-[#6EA9C9]/10 px-5 py-4 text-left">
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6EA9C9]">Exclusivité All In</div>
+          <div className="mt-2 text-sm leading-7 text-[#D8E6F0]">
+            Les sélections de prompts par marché, comme catalyseur du soir, catalyseur de la semaine ou portefeuille long terme, sont réservées au plan All In.
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-4">

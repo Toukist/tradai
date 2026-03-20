@@ -1,23 +1,40 @@
 import { useState } from 'react';
 import { api } from '../../utils/api';
 import AICard from '../shared/AICard';
+import PromptPresetSelector from '../shared/PromptPresetSelector';
 import SynthesisCard from '../shared/SynthesisCard';
 import ModelSelector from '../shared/ModelSelector';
+import { useTradingPromptPreset } from '../../hooks/useTradingPromptPreset';
 
-const DEFAULT_QUESTION = 'Scan le marché européen maintenant et donne-moi le meilleur setup Euronext avec angle BCE et risque/rendement.';
+const MARKET_ID = 'european';
 
 export default function EuropeanMarket({ user, token }) {
-  const [question, setQuestion] = useState(DEFAULT_QUESTION);
+  const isAllIn = user?.plan === 'team';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const {
+    presets,
+    selectedPresetId,
+    appliedPresetId,
+    appliedPreset,
+    question,
+    setQuestion,
+    handlePresetSelect,
+    handlePresetApply,
+  } = useTradingPromptPreset(MARKET_ID);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const result = await api.debate({ question, market: 'european' }, token);
+      const result = await api.debate({
+        question,
+        market: 'european',
+        promptPresetId: isAllIn ? appliedPreset?.id : undefined,
+        promptPresetLabel: isAllIn ? appliedPreset?.label : undefined,
+      }, token);
       setData(result);
     } catch (err) {
       setError(err.message);
@@ -39,6 +56,20 @@ export default function EuropeanMarket({ user, token }) {
         </div>
         {!user && <p className="mt-4 rounded-xl border border-[#C9A96E]/20 bg-[#C9A96E]/10 px-4 py-3 text-sm text-[#E7D0A1]">Connexion requise pour les analyses européennes live.</p>}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {isAllIn ? (
+            <PromptPresetSelector
+              presets={presets}
+              selectedPresetId={selectedPresetId}
+              appliedPresetId={appliedPresetId}
+              onSelectPreset={handlePresetSelect}
+              onApplyPreset={handlePresetApply}
+            />
+          ) : (
+            <div className="rounded-2xl border border-[#6EA9C9]/20 bg-[#6EA9C9]/10 p-4 text-sm leading-6 text-[#D8E6F0]">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6EA9C9]">Réservé All In</div>
+              <p className="mt-2">Les prompts experts Europe sont réservés au plan All In. Tu peux continuer à poser une question libre ci-dessous.</p>
+            </div>
+          )}
           <div>
             <label className="label">Question</label>
             <textarea className="input min-h-[130px]" value={question} onChange={(e) => setQuestion(e.target.value)} />
@@ -56,7 +87,7 @@ export default function EuropeanMarket({ user, token }) {
             <AICard key={key} title={key.toUpperCase()} content={value} accent={key === 'mistral' ? '#6EA9C9' : '#C9A96E'} />
           ))}
           <div className="xl:col-span-3">
-            <SynthesisCard title="Synthèse Europe" content={data.synthesis} />
+            <SynthesisCard title={`Synthèse Europe${appliedPreset?.label ? ` · ${appliedPreset.label}` : ''}`} content={data.synthesis} />
           </div>
         </section>
       )}
