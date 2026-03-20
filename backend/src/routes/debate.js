@@ -64,6 +64,54 @@ function buildSynthesisFocus(promptContext) {
   return 'Angle demandé : opportunité de marché actionnable. Garde un verdict final concret avec niveau d’entrée, invalidation et objectif principal.';
 }
 
+async function buildSynthesis({ synthSystemPrompt, synthMessage, responses }) {
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const synthClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const synthResponse = await synthClient.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      system: synthSystemPrompt,
+      messages: [{ role: 'user', content: synthMessage }],
+    });
+
+    const synthesis = synthResponse.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n')
+      .trim();
+
+    if (synthesis) {
+      return synthesis;
+    }
+  } catch (error) {
+    console.error('[debate/synthesis] Anthropic error:', error.message);
+  }
+
+  const fallback = await safeCall(
+    () => openai.callModel(synthSystemPrompt, synthMessage),
+    'SynthesisFallback'
+  );
+
+  if (fallback && !String(fallback).startsWith('GPT: Erreur')) {
+    return fallback;
+  }
+
+  return [
+    '1. CONSENSUS',
+    'La synthèse automatique est temporairement indisponible. Consulte les réponses individuelles ci-dessous pour comparer les points communs.',
+    '',
+    '2. DIVERGENCES',
+    'Compare en priorité les tickers, niveaux, catalyseurs et horizons mentionnés par chaque modèle.',
+    '',
+    '3. MEILLEUR SETUP',
+    'Utilise la réponse la plus précise et la plus chiffrée parmi les modèles retournés.',
+    '',
+    '4. VERDICT FINAL',
+    `Réponses disponibles: ${Object.keys(responses).join(', ') || 'aucune'}.`,
+  ].join('\n');
+}
+
 router.post('/', checkSubscription, async (req, res) => {
   try {
     const { question, market = 'global' } = req.body;
@@ -120,7 +168,7 @@ Synthétise maintenant ces 3 réponses en suivant la structure obligatoire.
 Les données sont dans les réponses ci-dessus — extrais-les et compile-les.
 `;
 
-  const synthSystemPrompt = `Tu es un directeur de trading desk — arbitre senior.
+    const synthSystemPrompt = `Tu es un directeur de trading desk — arbitre senior.
 Tu reçois 3 analyses d'AIs et tu dois les synthétiser.
 
 RÈGLES ABSOLUES :
@@ -140,22 +188,7 @@ STRUCTURE OBLIGATOIRE :
 
 Réponds en français. Sois concret et direct.`;
 
-    // Call Claude WITHOUT web search for synthesis
-    const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const synthClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const synthResponse = await synthClient.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1500,
-      system: synthSystemPrompt,
-      messages: [{ role: 'user', content: synthMessage }],
-      // NO tools here — synthesis must use provided content only
-    });
-
-    const synthesis = synthResponse.content
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('\n')
-      .trim() || 'Synthèse indisponible.';
+    const synthesis = await buildSynthesis({ synthSystemPrompt, synthMessage, responses });
 
     return res.json({ responses, synthesis, market, promptContext });
   } catch (error) {
