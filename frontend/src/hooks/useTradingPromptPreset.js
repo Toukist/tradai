@@ -26,7 +26,7 @@ export function useTradingPromptPreset(marketId) {
 
     const preset = getTradingPromptPreset(marketId, presetId);
     if (preset) {
-      setQuestion(preset.prompt);
+      setQuestion(preset.buildPrompt ? preset.buildPrompt() : '');
     }
   };
 
