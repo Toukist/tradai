@@ -5,7 +5,7 @@ const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export async function callModel(systemPrompt, userMessage) {
   try {
     const result = await client.models.generateContent({
-      model: 'gemini-2.5-pro-preview-03-25',
+      model: 'gemini-2.5-pro',
       contents: [
         {
           role: 'user',
