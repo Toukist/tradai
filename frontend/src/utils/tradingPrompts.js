@@ -224,6 +224,46 @@ Contraintes :
 - preferred_zone peut être null si nécessaire.
 `.trim();
 
+const JSON_SUPERNOVA_OUTPUT = `
+Termine OBLIGATOIREMENT par un bloc JSON valide respectant exactement cette structure :
+
+{
+  "supernova_count": 0,
+  "watchlist": [
+    {
+      "ticker": "Symbole",
+      "event": "Catalyseur principal",
+      "event_datetime": "Date/heure CEST ou null",
+      "thesis": "Thèse en une phrase",
+      "direction": "LONG | SHORT | NEUTRAL",
+      "entry_zone": { "min": 0, "max": 0 },
+      "stop_loss": 0,
+      "targets": [0, 0],
+      "risk_reward": 0,
+      "invalidation": "Condition d'invalidation",
+      "risk_level": "low | medium | high | extreme",
+      "confidence": 0,
+      "short_float_pct": null,
+      "avg_volume_10d": null,
+      "iv_rank": null,
+      "data_quality": "realtime | delayed | end_of_day | partial",
+      "missing_data": [],
+      "source": "Lien ou référence ou null"
+    }
+  ],
+  "market_context": "Contexte général du jour",
+  "as_of": "Date/heure des données utilisées",
+  "timezone": "CET"
+}
+
+Contraintes :
+- supernova_count = nombre d'items dans watchlist.
+- Si aucune supernova n'est identifiable, watchlist = [] et supernova_count = 0.
+- confidence doit être un nombre entre 0 et 1.
+- Ne jamais inventer short interest, IV, volumes ou sources.
+- Champs non vérifiés = null + ajout dans missing_data.
+`.trim();
+
 // --------------------------------------------------
 // AIDE À LA CONSTRUCTION DES PROMPTS
 // --------------------------------------------------
@@ -537,6 +577,75 @@ Travail attendu :
         ),
     },
     {
+      id: 'nasdaq-supernova',
+      label: 'Supernova Radar',
+      description: 'Radar court terme : meme stocks, biotech, squeeze, catalyseurs explosifs.',
+      buildPrompt: (runtime = {}) =>
+        buildPrompt(
+          `
+Agis comme un radar marchés court terme (swing / intraday) focalisé sur les supernovas.
+
+Période : aujourd'hui + semaine en cours.
+Fuseau : Europe/Brussels (CET). Affiche toutes les heures en CET avec la date complète.
+
+Univers :
+- US small / mid caps + biotech + meme stocks.
+- Peut étendre à ADR EV Chine et crypto si pertinent.
+- Liquidité minimale > 10 M$ / jour, spread serré.
+- Tolérance au risque : élevée.
+- Exclure : méga-caps sans catalyseur daté, penny stocks illiquides.
+
+Tâches — fais TOUTES si les données sont réellement disponibles :
+
+1. MEME / SUPERNOVA RADAR (Top 5-10)
+   - Pourquoi ça chauffe : news, narratif, short squeeze, options.
+   - Short interest / float si réellement connu.
+   - Niveaux clés : H/L pre-market, supports / résistances.
+   - Thèse "pour / contre" + risque principal.
+   - Si une donnée (short interest, gamma, dark pool) n'est pas confirmée, ne l'invente pas : mets null et mentionne-la dans missing_data.
+
+2. CATALYSEURS DATÉS & JOUABLES (heures CET)
+   - Earnings (BMO / AMC), conf calls, FDA (PDUFA / AdCom), readouts, splits, lock-ups, M&A, régulation, livraisons EV, macro (NFP / ISM / CPI).
+   - Pour chaque : ticker, événement, heure CET, probabilité / impact (faible / moyen / élevé).
+   - Uniquement si confirmés par source officielle.
+
+3. SENTIMENT & FLUX
+   - Mentions WSB / Reddit / Stocktwits / Twitter 24-72h seulement si réellement observables.
+   - Options flow / IV : strikes, échéances, anomalies seulement si vérifiables.
+   - Ne pas inventer de chiffres de sentiment.
+
+4. TECHNIQUE RAPIDE
+   - R/S, gap zones, VWAP / open range, triggers breakout / fail, ATR.
+   - Pas de blabla, juste les niveaux.
+
+5. BIOTECH CORNER (si pertinent)
+   - Design, endpoint primaire, taille d'effet vs historique, safety flags, timeline BLA.
+   - Uniquement pour les dossiers avec catalyseur daté cette semaine.
+
+6. MODULE CHOC PRÉ-MARKET
+   - Si un nom bouge ≥ ±15% avant l'open, ajouter :
+     - Plan halts / SSR (rappel : SSR = -10% pendant la séance).
+     - Niveaux H/L pre-market.
+     - Tactiques fade / reversal.
+
+7. PLAN DE JEU
+   - 3 scénarios : conservateur / équilibré / agressif.
+   - Invalidations.
+   - Checklist exécution : pré-market → open → post-event.
+
+8. WATCHLIST FINALE
+   - Tableau : Ticker | Événement | Date/Heure CET | Thèse | Entrée | Invalidation | Objectifs 1/2 | Risque.
+
+RÈGLES STRICTES :
+- Cite les sources (PR / IR officiels, SEC, FDA, calendriers earnings / macro) à chaque item clé.
+- Marque TBC si une donnée est incertaine.
+- Si aucune supernova ne ressort, retourne une watchlist vide — pas de fabrication.
+          `,
+          JSON_SUPERNOVA_OUTPUT,
+          runtime
+        ),
+    },
+    {
       id: 'nasdaq-long-term',
       label: 'Tech long terme',
       description: 'Leader tech US à accumuler sur 3 à 12 mois.',
@@ -780,6 +889,7 @@ export const TRADING_PROMPT_OUTPUTS = {
   macro: JSON_MACRO_OUTPUT,
   event: JSON_EVENT_OUTPUT,
   longTerm: JSON_LONG_TERM_OUTPUT,
+  supernova: JSON_SUPERNOVA_OUTPUT,
 };
 
 export const TRADING_PROMPT_CORE = {

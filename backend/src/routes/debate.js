@@ -57,6 +57,10 @@ function buildSynthesisFocus(promptContext) {
     return 'Angle : rotation sectorielle. Identifie clairement le secteur gagnant le leadership, le secteur perdant, le driver de la rotation (taux, growth, geo), et propose long secteur fort / short relatif secteur faible, ou titre leader.';
   }
 
+  if (source.includes('supernova') || source.includes('radar') || source.includes('meme')) {
+    return 'Angle : supernova / meme / squeeze radar. Identifie les TOP tickers les plus explosifs de la session, classe-les par urgence, donne une watchlist finale consolidee avec entree, invalidation, objectifs. Attention sizing : risque extreme, la taille doit etre reduite. Fusionne les vues des 3 AIs en une watchlist unique sans doublons.';
+  }
+
   if (source.includes('options') || source.includes('squeeze')) {
     return 'Angle : flux speculatifs / options. Focus momentum, unusual options activity, short interest avec days-to-cover, gamma exposure level. Sizing reduit compte tenu de la volatilite elevee.';
   }
