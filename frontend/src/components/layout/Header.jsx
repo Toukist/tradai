@@ -1,4 +1,23 @@
-export default function Header({ activeDesk, setActiveDesk, user, onLogout }) {
+import { useState } from 'react';
+import { api } from '../../utils/api';
+
+export default function Header({ activeDesk, setActiveDesk, user, token, onLogout }) {
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  const handleBillingPortal = async () => {
+    if (!token) return;
+
+    setBillingLoading(true);
+    try {
+      const { url } = await api.portal(token);
+      if (url) window.location.href = url;
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
   return (
     <header className="border-b border-white/10 bg-[#0A0C10] px-6 py-4">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -32,9 +51,16 @@ export default function Header({ activeDesk, setActiveDesk, user, onLogout }) {
         <div className="flex items-center gap-3 text-sm text-[#7A7F89]">
           <span>{user ? `${user.name} — ${user.plan?.toUpperCase()}` : 'Non connecté'}</span>
           {user && (
-            <button onClick={onLogout} className="btn-secondary px-3 py-2 text-xs">
-              Déconnexion
-            </button>
+            <>
+              {user.plan !== 'free' && (
+                <button onClick={handleBillingPortal} disabled={billingLoading} className="btn-secondary px-3 py-2 text-xs disabled:opacity-50">
+                  {billingLoading ? 'Ouverture...' : 'Facturation'}
+                </button>
+              )}
+              <button onClick={onLogout} className="btn-secondary px-3 py-2 text-xs">
+                Déconnexion
+              </button>
+            </>
           )}
         </div>
       </div>

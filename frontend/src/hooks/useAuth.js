@@ -13,14 +13,25 @@ export function useAuth() {
       return;
     }
 
-    api.me(token)
-      .then((data) => setUser(data.user || null))
-      .catch(() => {
-        localStorage.removeItem('tradai_token');
-        setToken(null);
-        setUser(null);
-      });
+    refreshUser(token);
   }, [token]);
+
+  const refreshUser = async (currentToken = token) => {
+    if (!currentToken) {
+      return null;
+    }
+
+    try {
+      const data = await api.me(currentToken);
+      setUser(data.user || null);
+      return data.user || null;
+    } catch (err) {
+      localStorage.removeItem('tradai_token');
+      setToken(null);
+      setUser(null);
+      throw err;
+    }
+  };
 
   const login = async (email, password) => {
     setLoading(true);
@@ -63,5 +74,5 @@ export function useAuth() {
     setError('');
   };
 
-  return { user, token, loading, error, login, register, logout };
+  return { user, token, loading, error, login, register, logout, refreshUser };
 }

@@ -12,8 +12,54 @@ const PLANS = {
   team: process.env.STRIPE_TEAM_PRICE_ID,
 };
 
+function missingStripeConfig() {
+  return [
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_TRADER_PRICE_ID',
+    'STRIPE_ADVISOR_PRICE_ID',
+    'STRIPE_TEAM_PRICE_ID',
+    'FRONTEND_URL',
+  ].filter((key) => !process.env[key]);
+}
+
+function getPlanFromSubscription(subscription) {
+  const priceId = subscription.items?.data?.[0]?.price?.id;
+  const match = Object.entries(PLANS).find(([, planPriceId]) => planPriceId === priceId);
+  return match?.[0] || 'free';
+}
+
+function getFrontendUrl() {
+  return (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+}
+
+function assertStripeConfigured(res, requiredKeys = missingStripeConfig()) {
+  if (!requiredKeys.length) {
+    return true;
+  }
+
+  res.status(503).json({
+    error: 'Stripe non configuré',
+    missing: requiredKeys,
+  });
+  return false;
+}
+
+router.get('/status', (_req, res) => {
+  const missing = missingStripeConfig();
+  return res.json({
+    configured: missing.length === 0,
+    missing,
+    plans: Object.fromEntries(Object.entries(PLANS).map(([plan, priceId]) => [plan, !!priceId])),
+  });
+});
+
 router.post('/checkout', authenticateToken, async (req, res) => {
   try {
+    if (!assertStripeConfigured(res, missingStripeConfig().filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'))) {
+      return;
+    }
+
     const { plan } = req.body;
     const priceId = PLANS[plan];
 
@@ -40,9 +86,10 @@ router.post('/checkout', authenticateToken, async (req, res) => {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
-      success_url: `${process.env.FRONTEND_URL}/dashboard?success=true`,
-      cancel_url: `${process.env.FRONTEND_URL}/pricing`,
+      success_url: `${getFrontendUrl()}?checkout=success`,
+      cancel_url: `${getFrontendUrl()}?checkout=cancelled`,
       metadata: { plan },
+      subscription_data: { metadata: { plan, userId: req.userId } },
     });
 
     return res.json({ url: session.url });
@@ -53,6 +100,10 @@ router.post('/checkout', authenticateToken, async (req, res) => {
 });
 
 router.post('/webhook', async (req, res) => {
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    return res.status(503).send('Webhook Stripe non configuré');
+  }
+
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -71,9 +122,24 @@ router.post('/webhook', async (req, res) => {
     );
   }
 
+  if (event.type === 'customer.subscription.updated') {
+    const subscription = event.data.object;
+    const plan = subscription.status === 'active' || subscription.status === 'trialing'
+      ? getPlanFromSubscription(subscription)
+      : 'free';
+
+    await pool.query(
+      'UPDATE users SET plan = $1, stripe_subscription_id = $2 WHERE stripe_customer_id = $3',
+      [plan, subscription.id, subscription.customer]
+    );
+  }
+
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object;
-    await pool.query('UPDATE users SET plan = $1 WHERE stripe_customer_id = $2', ['free', subscription.customer]);
+    await pool.query(
+      'UPDATE users SET plan = $1, stripe_subscription_id = NULL WHERE stripe_customer_id = $2',
+      ['free', subscription.customer]
+    );
   }
 
   return res.json({ received: true });
@@ -81,6 +147,10 @@ router.post('/webhook', async (req, res) => {
 
 router.post('/portal', authenticateToken, async (req, res) => {
   try {
+    if (!assertStripeConfigured(res, missingStripeConfig().filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'))) {
+      return;
+    }
+
     const userResult = await pool.query('SELECT stripe_customer_id FROM users WHERE id = $1', [req.userId]);
     const customerId = userResult.rows[0]?.stripe_customer_id;
 
@@ -90,7 +160,7 @@ router.post('/portal', authenticateToken, async (req, res) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${process.env.FRONTEND_URL}/dashboard`,
+      return_url: getFrontendUrl(),
     });
 
     return res.json({ url: session.url });

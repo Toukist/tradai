@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Footer from './components/layout/Footer';
@@ -15,9 +15,18 @@ export default function App() {
   const auth = useAuth();
   const subscription = useSubscription(auth.user);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success') {
+      setActiveDesk('pricing');
+      auth.refreshUser?.().catch(() => undefined);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [auth.token]);
+
   return (
     <div className="min-h-screen bg-[#080A0E] text-[#E0DDD6]">
-      <Header activeDesk={activeDesk} setActiveDesk={setActiveDesk} user={auth.user} onLogout={auth.logout} />
+      <Header activeDesk={activeDesk} setActiveDesk={setActiveDesk} user={auth.user} token={auth.token} onLogout={auth.logout} />
       {auth.user?.plan === 'free' && <AffiliateBar />}
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">

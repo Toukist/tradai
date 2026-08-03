@@ -2,6 +2,7 @@ const AFFILIATES = [
   { name: 'eToro', logo: '📊', text: 'Trading 0% commission', url: 'https://etoro.com', color: '#00C853' },
   { name: 'Saxo Bank', logo: '🏦', text: 'Plateforme pro Belgique', url: 'https://home.saxo', color: '#0066CC' },
   { name: 'Bolero', logo: '🔵', text: 'Courtier KBC Belgique', url: 'https://bolero.be', color: '#009BE0' },
+  { name: 'Auto Invest', logo: '⚙️', text: 'Scénario trading auto 5 000€', url: 'https://www.etoro.com/copytrader/', color: '#C9A96E' },
 ];
 
 export default function AffiliateBar() {

@@ -65,7 +65,21 @@ Variable frontend principale :
 
 ## Stripe
 
-Créer les produits et prix dans le dashboard Stripe, puis reporter les `price_id` dans le backend.
+Créer les produits et prix dans le dashboard Stripe, puis reporter les `price_id` dans les variables backend.
+
+Webhook Stripe à configurer :
+
+```text
+https://TON_BACKEND/api/stripe/webhook
+```
+
+Événements à écouter :
+
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+
+Diagnostic backend : `GET /api/stripe/status` indique si les variables Stripe requises sont présentes.
 
 ## Légal
 

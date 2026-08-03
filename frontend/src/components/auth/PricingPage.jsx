@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { api } from '../../utils/api';
 
 const PLANS = [
@@ -32,10 +33,27 @@ const PLANS = [
 ];
 
 export default function PricingPage({ token }) {
+  const [error, setError] = useState('');
+  const [loadingPlan, setLoadingPlan] = useState('');
+
   const handleSubscribe = async (planId) => {
-    if (planId === 'free' || !token) return;
-    const { url } = await api.checkout(planId, token);
-    if (url) window.location.href = url;
+    if (planId === 'free') return;
+
+    if (!token) {
+      setError('Connecte-toi pour choisir un plan.');
+      return;
+    }
+
+    setError('');
+    setLoadingPlan(planId);
+    try {
+      const { url } = await api.checkout(planId, token);
+      if (url) window.location.href = url;
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingPlan('');
+    }
   };
 
   return (
@@ -51,6 +69,7 @@ export default function PricingPage({ token }) {
             Les sélections de prompts par marché, comme catalyseur du soir, catalyseur de la semaine ou portefeuille long terme, sont réservées au plan All In.
           </div>
         </div>
+        {error && <div className="mx-auto mt-4 max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div>}
       </section>
 
       <section className="grid gap-4 xl:grid-cols-4">
@@ -80,10 +99,11 @@ export default function PricingPage({ token }) {
             </ul>
             <button
               onClick={() => handleSubscribe(plan.id)}
+              disabled={loadingPlan === plan.id}
               className="mt-8 w-full rounded-xl border px-4 py-3 text-sm font-semibold transition"
               style={{ borderColor: plan.color, color: plan.highlighted ? '#000' : plan.color, background: plan.highlighted ? plan.color : 'transparent' }}
             >
-              {plan.cta}
+              {loadingPlan === plan.id ? 'Ouverture...' : plan.cta}
             </button>
           </div>
         ))}
