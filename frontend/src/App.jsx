@@ -27,7 +27,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#080A0E] text-[#E0DDD6]">
       <Header activeDesk={activeDesk} setActiveDesk={setActiveDesk} user={auth.user} token={auth.token} onLogout={auth.logout} />
-      {(!auth.user || auth.user.plan === 'free') && <AffiliateBar />}
+      <AffiliateBar />
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-6">
         <Sidebar
