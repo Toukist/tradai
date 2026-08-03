@@ -12,15 +12,30 @@ const PLANS = {
   team: process.env.STRIPE_TEAM_PRICE_ID,
 };
 
+const STRIPE_CONFIG_RULES = {
+  STRIPE_SECRET_KEY: /^sk_(live|test)_/,
+  STRIPE_WEBHOOK_SECRET: /^whsec_/,
+  STRIPE_TRADER_PRICE_ID: /^price_/,
+  STRIPE_ADVISOR_PRICE_ID: /^price_/,
+  STRIPE_TEAM_PRICE_ID: /^price_/,
+  FRONTEND_URL: /^https?:\/\//,
+};
+
 function missingStripeConfig() {
-  return [
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-    'STRIPE_TRADER_PRICE_ID',
-    'STRIPE_ADVISOR_PRICE_ID',
-    'STRIPE_TEAM_PRICE_ID',
-    'FRONTEND_URL',
-  ].filter((key) => !process.env[key]);
+  return Object.keys(STRIPE_CONFIG_RULES).filter((key) => !process.env[key]);
+}
+
+function invalidStripeConfig() {
+  return Object.entries(STRIPE_CONFIG_RULES)
+    .filter(([key, rule]) => process.env[key] && !rule.test(process.env[key]))
+    .map(([key]) => key);
+}
+
+function stripeConfigErrors() {
+  return {
+    missing: missingStripeConfig(),
+    invalid: invalidStripeConfig(),
+  };
 }
 
 function getPlanFromSubscription(subscription) {
@@ -33,30 +48,36 @@ function getFrontendUrl() {
   return (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 }
 
-function assertStripeConfigured(res, requiredKeys = missingStripeConfig()) {
-  if (!requiredKeys.length) {
+function assertStripeConfigured(res, errors = stripeConfigErrors()) {
+  if (!errors.missing.length && !errors.invalid.length) {
     return true;
   }
 
   res.status(503).json({
     error: 'Stripe non configuré',
-    missing: requiredKeys,
+    missing: errors.missing,
+    invalid: errors.invalid,
   });
   return false;
 }
 
 router.get('/status', (_req, res) => {
-  const missing = missingStripeConfig();
+  const errors = stripeConfigErrors();
   return res.json({
-    configured: missing.length === 0,
-    missing,
+    configured: errors.missing.length === 0 && errors.invalid.length === 0,
+    missing: errors.missing,
+    invalid: errors.invalid,
     plans: Object.fromEntries(Object.entries(PLANS).map(([plan, priceId]) => [plan, !!priceId])),
   });
 });
 
 router.post('/checkout', authenticateToken, async (req, res) => {
   try {
-    if (!assertStripeConfigured(res, missingStripeConfig().filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'))) {
+    const errors = stripeConfigErrors();
+    if (!assertStripeConfigured(res, {
+      missing: errors.missing.filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'),
+      invalid: errors.invalid.filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'),
+    })) {
       return;
     }
 
@@ -147,7 +168,11 @@ router.post('/webhook', async (req, res) => {
 
 router.post('/portal', authenticateToken, async (req, res) => {
   try {
-    if (!assertStripeConfigured(res, missingStripeConfig().filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'))) {
+    const errors = stripeConfigErrors();
+    if (!assertStripeConfigured(res, {
+      missing: errors.missing.filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'),
+      invalid: errors.invalid.filter((key) => key !== 'STRIPE_WEBHOOK_SECRET'),
+    })) {
       return;
     }
 
